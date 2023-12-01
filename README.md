@@ -7,3 +7,4 @@ There is still plenty of hard-coding to remove, which will largely entail changi
 
 You may notice that I build against ESXi hosts to start, and then use vCenter.  This reflects the evolutionary journey I have been on (and the fact to start I had only a single small PC to play with).  I could refactor to use vCenter only, but I think leaving the ESXi bits in is educational (and demonstrates what having multiple aliased providers looks like too).
 
+I should add that for the NSX-T bits, I found usable documentation to be very hard to find.  However there is an incredibly good VMware Lab building repo by Rutger Blom (https://github.com/rutgerblom/SDDC.Lab) which I used extensivley as a reference. It is also a great demonstration of Ansible usage too (thanks Rutger!).
