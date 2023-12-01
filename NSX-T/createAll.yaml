@@ -1,0 +1,14 @@
+---
+- ansible.builtin.import_playbook: createUplinkProfiles.yaml
+
+- ansible.builtin.import_playbook: createIPPools.yaml
+
+- ansible.builtin.import_playbook: createTZs.yaml
+
+- ansible.builtin.import_playbook: registerVCenter.yaml
+
+- ansible.builtin.import_playbook: createTransportNodeProfile.yaml
+
+- ansible.builtin.import_playbook: createSegments.yaml
+
+- ansible.builtin.import_playbook: deployNSX2ESXi.yaml

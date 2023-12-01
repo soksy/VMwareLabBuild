@@ -1,0 +1,29 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  name: createTransportNodeProfile.yaml
+  vars_files:
+    - myNSXTvars.yml
+
+  tasks:
+    - name: Get creds from vault
+      set_fact:
+        nsxMgrUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_username') }}"
+        nsxMgrPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_password') }}"  
+
+    - name: Create transport node profile
+      vmware.ansible_for_nsxt.nsxt_transport_node_profiles:
+        hostname: "{{ nsxMgrHostname }}"
+        username: "{{ nsxMgrUsername }}"
+        password: "{{ nsxMgrPassword }}"
+        validate_certs: "{{ validateCerts }}"
+        resource_type: "TransportNodeProfile"
+        display_name: "{{ item.display_name }}"
+        description: "{{ item.description }}"
+        host_switch_spec:
+          resource_type: StandardHostSwitchSpec
+          host_switches: "{{ item.host_switches }}"
+
+        state: "present"
+      loop: "{{ transportNodeProfiles }}"
+      register: createTransportNodeProfileResult

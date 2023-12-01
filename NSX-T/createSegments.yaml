@@ -1,0 +1,29 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  vars_files:
+    - myNSXTvars.yml
+  
+  tasks:
+    - name: Get creds from vault
+      set_fact:
+        nsxMgrUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_username') }}"
+        nsxMgrPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_password') }}"  
+
+    - name: Create segments
+      vmware.ansible_for_nsxt.nsxt_policy_segment:
+        hostname: "{{ nsxMgrHostname }}"
+        username: "{{ nsxMgrUsername }}"
+        password: "{{ nsxMgrPassword }}"
+        validate_certs: "{{ validateCerts }}"
+        display_name: "{{ item.Name }}"
+        description: "{{ item.Description }}"
+        admin_state: "{{ item.AdminState }}"
+        replication_mode: "{{ item.ReplicationMode }}"
+        transport_zone_display_name: "{{ item.TransportZone }}"
+        vlan_ids: "{{ item.VLANS }}"
+        advanced_config:
+          uplink_teaming_policy_name: "{{ item.UplinkTeamingPolicy | default(omit) }}"
+        state: "present"
+      with_items:
+        - "{{ Segments }}"

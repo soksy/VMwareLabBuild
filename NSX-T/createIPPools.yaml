@@ -1,0 +1,26 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  vars_files:
+    - myNSXTvars.yml
+
+  tasks:
+    - name: Get creds from vault
+      set_fact:
+        nsxMgrUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_username') }}"
+        nsxMgrPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_password') }}"  
+    
+    - name: Create IP Pools
+      vmware.ansible_for_nsxt.nsxt_policy_ip_pool:
+        hostname: "{{ nsxMgrHostname }}"
+        username: "{{ nsxMgrUsername }}"
+        password: "{{ nsxMgrPassword }}"
+        validate_certs: "{{ validateCerts }}"
+        display_name: "{{ item.display_name }}"
+        description: "{{ item.description }}"
+        pool_static_subnets: "{{ item.pool_static_subnets }}"
+        state: "{{ state }}"
+      with_items:
+        - "{{ ip_pools }}"
+      register: ipPoolResult
+      

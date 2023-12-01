@@ -1,0 +1,28 @@
+---
+- name:  Set PG-Nested to VLAN2 for build
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  vars:
+    esxilist:
+      - esxi_hostname: "esxi7.vmware.soksy.org"
+
+  tasks: 
+    - name: Get creds from vault
+      set_fact:
+        vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
+        vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
+        esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
+        esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+
+    - name: Create/update PG-Nested-ToR-A with VLAN 2 for initial build
+      community.vmware.vmware_portgroup:
+        hostname: "{{ item.esxi_hostname }}"
+        username: "{{ esxi_username }}"
+        password: "{{ esxi_password }}"
+        hosts: [ "{{ item.esxi_hostname }}" ]
+        switch: vSwitchToR-A
+        portgroup: PG-Nested-ToR-A
+        vlan_id: 2
+        validate_certs: no
+      loop: "{{ esxilist }}"

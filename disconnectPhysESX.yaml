@@ -1,0 +1,38 @@
+---
+- name: Disconnect real ESXi Hosts from their SNCs so subsequent builds can control ESXi directly
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  vars:
+    vcenter_hostname: "vcenter.home.soksy.org"
+    nesteddatacenter: "myDC"
+    realdatacenter: "RealWorld"
+    cluster: "myCluster"
+    realesxilist:
+      - real_esxi_hostname: "esxi7.vmware.soksy.org"
+        sncname: "ESXi7-07-SNC"
+      - real_esxi_hostname: "esxi7-04.vmware.soksy.org"
+        sncname: "ESXi7-04-SNC"
+
+  tasks: 
+    - name: Get creds from vault
+      set_fact:
+        vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
+        vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
+        esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
+        esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"    
+
+    - name: Disconnect real ESXi Hosts from their SNCs 
+      community.vmware.vmware_host:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter: "{{ realdatacenter }}"
+        cluster: "{{ item.sncname }}"
+        esxi_hostname: '{{ item.real_esxi_hostname }}'
+        esxi_username: '{{ esxi_username }}'
+        esxi_password: '{{ esxi_password }}'
+        state: disconnected
+        validate_certs: no
+      loop: "{{ realesxilist }}"
+
