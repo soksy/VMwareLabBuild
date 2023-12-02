@@ -4,15 +4,10 @@
   connection: local
   gather_facts: no
   vars:
-    vcenter_hostname: "vcenter.home.soksy.org"
-    nesteddatacenter: "myDC"
+    vcenter_hostname: "{{ vcenterHost }}"
+    nesteddatacenter: "{{ datacenterName }}"
     realdatacenter: "RealWorld"
-    cluster: "myCluster"
-    realesxilist:
-      - real_esxi_hostname: "esxi7.vmware.soksy.org"
-        sncname: "ESXi7-07-SNC"
-      - real_esxi_hostname: "esxi7-04.vmware.soksy.org"
-        sncname: "ESXi7-04-SNC"
+    cluster: "{{ clusterName }}"
 
   tasks: 
     - name: Get creds from vault
@@ -28,11 +23,10 @@
         username: '{{ vcenter_username }}'
         password: '{{ vcenter_password }}'
         datacenter: "{{ realdatacenter }}"
-        cluster: "{{ item.sncname }}"
-        esxi_hostname: '{{ item.real_esxi_hostname }}'
+        cluster: "{{ sncName }}"
+        esxi_hostname: '{{ esxiHost }}'
         esxi_username: '{{ esxi_username }}'
         esxi_password: '{{ esxi_password }}'
         state: disconnected
         validate_certs: no
-      loop: "{{ realesxilist }}"
 

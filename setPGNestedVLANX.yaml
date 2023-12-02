@@ -1,11 +1,8 @@
 ---
-- name:  Set PG-Nested to VLAN3 for build
+- name:  Set PG-Nested to Mgmt VLAN for build
   hosts: 127.0.0.1
   connection: local
   gather_facts: no
-  vars:
-    esxilist:
-      - esxi_hostname: "esxi7-04.vmware.soksy.org"
 
   tasks: 
     - name: Get creds from vault
@@ -15,14 +12,13 @@
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
 
-    - name: Create/update PG-Nested-ToR-A with VLAN 3 for initial build
+    - name: Create/update PG-Nested-ToR-A with Management VLAN ID for initial build, so that DHCP works
       community.vmware.vmware_portgroup:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ esxiHost }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        hosts: [ "{{ item.esxi_hostname }}" ]
+        hosts: [ "{{ esxiHost }}" ]
         switch: vSwitchToR-A
         portgroup: PG-Nested-ToR-A
-        vlan_id: 3
+        vlan_id: "{{ vlanID }}"
         validate_certs: no
-      loop: "{{ esxilist }}"

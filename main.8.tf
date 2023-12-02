@@ -6,6 +6,7 @@ variable datastoreName {}
 variable vdsName {}
 variable mgmtVlan {}
 variable nested_hosts {}
+variable sncName {}
 
 variable "VAULT_ADDR" {
   description = "URL of Hashicorp Vault instance."
@@ -48,20 +49,14 @@ provider "vsphere" {
   vsphere_server       = var.esxiHost
 }
 
-resource "null_resource" "PG-Nested-VLAN2" {
+resource "null_resource" "PG-Nested-VLANX" {
   provisioner "local-exec" {
-    command = "ansible-playbook setPGNestedVLAN2.yaml"
+    command = "ansible-playbook --extra-vars \"vlanID=${var.mgmtVlan} esxiHost=${var.esxiHost}\" setPGNestedVLANX.yaml"
   } 
 }
 
-#resource "null_resource" "PG-Nested-VLAN3" {
-#  provisioner "local-exec" {
-#    command = "ansible-playbook setPGNestedVLAN3.yaml"
-#  } 
-#}
-
 module "nested" {
-  depends_on = [ null_resource.PG-Nested-VLAN2 ]
+  depends_on = [ null_resource.PG-Nested-VLANX ]
   source    = "./modules/nested"
   providers = {
     vsphere = vsphere.esxi
@@ -71,10 +66,7 @@ module "nested" {
 }
 
 resource "time_sleep" "pause_for_cmi" {
-  depends_on = [
-    module.nested,
-    # module.second
-  ]
+  depends_on = [ module.nested ]
   create_duration = "15s"
 }
 
@@ -140,7 +132,7 @@ resource "null_resource" "config_vmk0_services" {
 #resource "null_resource" "disconnect_physical_esx" {
 #  provisioner "local-exec" {
 #    when = destroy
-#    command = "ansible-playbook disconnectPhysESX.yaml"
+#    command = "ansible-playbook --extra-vars \"vlanID=${var.vcenterHost} esxiHost=${var.esxiHost} datacenterName=${var.datacenterName} clusterName=${var.clusterName} sncName=${var.sncName}\" disconnectPhysESX.yaml"
 #  }
 #}
 

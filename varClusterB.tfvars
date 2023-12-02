@@ -3,6 +3,7 @@ clusterName = "myClusterB"
 
 esxiHost = "esxi7-04.vmware.soksy.org"
 vcenterHost = "vcenter.home.soksy.org"
+sncName = "esxi-real-2"
 
 datastoreName = "datastore-nvme-04-00"
 
