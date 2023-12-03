@@ -1,6 +1,7 @@
 variable datacenterName {}
 variable clusterName {}
 variable esxiHost {}
+variable esxiHostIP {}
 variable vcenterHost {}
 variable datastoreName {} 
 variable vdsName {}
@@ -31,6 +32,11 @@ locals {
   vcenter_password = data.vault_generic_secret.vmware.data["vcenter_password"]
   esxiUsername     = data.vault_generic_secret.vmware.data["esxi_username"]
   esxiPassword     = data.vault_generic_secret.vmware.data["esxi_password"]
+  nestedESXiJSONEncoded  = jsonencode(var.nested_hosts)
+}
+
+output "TheESXiList" {
+  value = local.nestedESXiJSONEncoded
 }
 
 provider "vsphere" {
@@ -49,7 +55,9 @@ provider "vsphere" {
   vsphere_server       = var.esxiHost
 }
 
+
 resource "null_resource" "PG-Nested-VLANX" {
+  depends_on = [ null_resource.disconnect_physical_esx ]
   provisioner "local-exec" {
     command = "ansible-playbook --extra-vars \"vlanID=${var.mgmtVlan} esxiHost=${var.esxiHost}\" setPGNestedVLANX.yaml"
   } 
@@ -81,6 +89,9 @@ resource "null_resource" "config_storage" {
   depends_on = [ null_resource.PG-Nested-Trunk ]
   provisioner "local-exec" {
     command = "ansible-playbook configNestedESX.8.yaml"
+    environment = {
+      nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
+    }
   } 
 }
 
@@ -129,10 +140,23 @@ resource "null_resource" "config_vmk0_services" {
 #  }
 #}
 
-#resource "null_resource" "disconnect_physical_esx" {
-#  provisioner "local-exec" {
-#    when = destroy
-#    command = "ansible-playbook --extra-vars \"vlanID=${var.vcenterHost} esxiHost=${var.esxiHost} datacenterName=${var.datacenterName} clusterName=${var.clusterName} sncName=${var.sncName}\" disconnectPhysESX.yaml"
-#  }
-#}
+resource "null_resource" "disconnect_physical_esx" {
+    triggers = {
+      ensures-invoked-everytime = uuid()
+      vcenterHost = var.vcenterHost
+      sncName = var.sncName
+      esxiHostIP = var.esxiHostIP
+    }
+
+  provisioner "local-exec" {
+    when = destroy
+    command = "ansible-playbook disconnectPhysESX.yaml"
+
+    environment = {
+      vcenterHost = self.triggers.vcenterHost
+      esxiHostIP = self.triggers.esxiHostIP
+      sncName = self.triggers.sncName
+    }
+  }
+}
 

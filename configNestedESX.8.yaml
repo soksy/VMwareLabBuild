@@ -42,13 +42,26 @@
         vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+        nestedESXiHosts: "{{ lookup('env', 'nestedESXiJSONEncoded') | from_json }}"
+
+    - name: showNestedHostDetails
+      ansible.builtin.debug:
+        msg: [ 
+          "{{ item.value.name }}",
+          "{{ item.value.fqdn }}",
+          "{{ item.value.mac }}",
+          "{{ item.value['build-ip'] }}",
+          "{{ item.value['operating-ip'] }}",
+          "{{ item.value['storage-vmk-ip'] }}",
+        ]
+      loop: "{{ nestedESXiHosts | dict2items }}" 
 
     - name: Create Storage vSwitch
       community.vmware.vmware_vswitch:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         switch: "{{ storage_switch }}"
         nics: "{{ storage_vnics }}"
@@ -56,14 +69,14 @@
         state: present
         security:
           promiscuous_mode: True
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}" 
 
     - name: Create Storage Portgroup
       community.vmware.vmware_portgroup:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         switch: "{{ storage_switch }}"
         portgroup: "{{ storage_portgroup }}"
@@ -79,58 +92,58 @@
           failback: true
           active_adapters: "{{ storage_vnics }}"
           standby_adapters: null
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}" 
 
     - name: Create VMKnic for Storage
       community.vmware.vmware_vmkernel:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         vswitch_name: "{{ storage_switch }}"
         portgroup_name: "{{ storage_portgroup }}"
         network:
           type: 'static'
-          ip_address: "{{ item.vmkip }}"
+          ip_address: "{{ item.value['storage-vmk-ip'] }}"
           subnet_mask: 255.255.255.0
         mtu: "{{ storage_mtu }}"
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
 
     - name: Enable iSCSI of ESXi
       community.vmware.vmware_host_iscsi:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         iscsi_config:
           vmhba_name: vmhba65
         state: enabled
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Add VMKernels to iSCSI config of ESXi
       community.vmware.vmware_host_iscsi:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         iscsi_config:
           vmhba_name: vmhba65
           port_bind:
             - vmk1
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Add static iscsi target
       community.vmware.vmware_host_iscsi:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         iscsi_config:
           vmhba_name: vmhba65
@@ -138,14 +151,14 @@
             iscsi_name: "{{ storage_static_target }}"
             address: "{{ qnap_target_ip }}"
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Mount NFS v4.1 datastore0 to ESXi
       community.vmware.vmware_host_datastore:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         nfs_server: '{{ qnap_target_ip }}'
         datastore_type: '{{ nfsdatastore0.type }}'
@@ -153,14 +166,14 @@
         nfs_path: '{{ nfsdatastore0.path }}'
         nfs_ro: no
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Mount NFS v4.1 datastore1 to ESXi
       community.vmware.vmware_host_datastore:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ item.value.fqdn }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        esxi_hostname: "{{ item.esxi_hostname }}"
+        esxi_hostname: "{{ item.value.fqdn }}"
         validate_certs: no
         nfs_server: '{{ qnap_target_ip }}'
         datastore_type: '{{ nfsdatastore1.type }}'
@@ -168,29 +181,29 @@
         nfs_path: '{{ nfsdatastore1.path }}'
         nfs_ro: no
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Recan HBA's for a given ESXi host and refresh storage system objects
       community.vmware.vmware_host_scanhba:
-        hostname: '{{ item.esxi_hostname }}'
+        hostname: '{{ item.value.fqdn }}'
         username: '{{ esxi_username }}'
         password: '{{ esxi_password }}'
-        esxi_hostname: '{{ item.esxi_hostname }}'
+        esxi_hostname: '{{ item.value.fqdn }}'
         validate_certs: no
         refresh_storage: true
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
     
     - name: Start ssh setting for an ESXi Host with Service policy
       community.vmware.vmware_host_service_manager:
-        hostname: '{{ item.esxi_hostname }}'
+        hostname: '{{ item.value.fqdn }}'
         username: '{{ esxi_username }}'
         password: '{{ esxi_password }}'
-        esxi_hostname: '{{ item.esxi_hostname }}'
+        esxi_hostname: '{{ item.value.fqdn }}'
         validate_certs: no
         service_name: TSM-SSH
         service_policy: on
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
 
 #    - name: Add static routes to vcenter subnet

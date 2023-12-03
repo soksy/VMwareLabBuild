@@ -2,6 +2,7 @@ datacenterName = "myDC"
 clusterName = "myClusterB"
 
 esxiHost = "esxi7-04.vmware.soksy.org"
+esxiHostIP = "192.168.1.34"
 vcenterHost = "vcenter.home.soksy.org"
 sncName = "esxi-real-2"
 
