@@ -13,19 +13,6 @@
     storage_vlan: 10
     storage_vnics: vmnic2
     storage_static_target: iqn.2004-04.com.qnap:ts-328:iscsi.vmware.216dca
-    esxilist:
-      - esxi_hostname: "esxi8-00.vmware.soksy.org"
-        vmkip: "192.168.10.30"
-      - esxi_hostname: "esxi8-01.vmware.soksy.org"
-        vmkip: "192.168.10.31"
-      - esxi_hostname: "esxi8-02.vmware.soksy.org"
-        vmkip: "192.168.10.32"
-      # - esxi_hostname: "esxi8-10.vmware.soksy.org"
-      #   vmkip: "192.168.10.35"
-      # - esxi_hostname: "esxi8-11.vmware.soksy.org"
-      #   vmkip: "192.168.10.36"
-      # - esxi_hostname: "esxi8-12.vmware.soksy.org"
-      #   vmkip: "192.168.10.37"
     nfsdatastore0:
       name: 'datastore-nfs-00'
       path: '/datastore-nfs-00'
@@ -47,11 +34,7 @@
     - name: showNestedHostDetails
       ansible.builtin.debug:
         msg: [ 
-          "{{ item.value.name }}",
           "{{ item.value.fqdn }}",
-          "{{ item.value.mac }}",
-          "{{ item.value['build-ip'] }}",
-          "{{ item.value['operating-ip'] }}",
           "{{ item.value['storage-vmk-ip'] }}",
         ]
       loop: "{{ nestedESXiHosts | dict2items }}" 
@@ -204,7 +187,3 @@
         service_policy: on
         state: present
       loop: "{{ nestedESXiHosts | dict2items }}"
-
-
-#    - name: Add static routes to vcenter subnet
-#      command: pwsh esxStaticRoutes.ps1

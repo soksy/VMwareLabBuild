@@ -122,7 +122,10 @@ resource "time_sleep" "pause_for_cluster" {
 resource "null_resource" "config_vds" {
   depends_on = [ time_sleep.pause_for_cluster ]
   provisioner "local-exec" {
-    command = "ansible-playbook configVDS.8.yaml"
+    command = "ansible-playbook -vvv --extra-vars \"vcenterHost=${var.vcenterHost} datacenterName=${var.datacenterName} vdsName=${var.vdsName}\" configVDS.8.yaml"
+    environment = {
+      nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
+    }
   } 
 }
 

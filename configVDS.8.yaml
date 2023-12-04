@@ -4,35 +4,27 @@
   connection: local
   gather_facts: false
   vars:
-    vcenter_hostname: "vcenter.home.soksy.org"
-    datacenter: "myDC"
     storage_mtu: 1700
-    esxilist:
-      - esxi_hostname: "esxi8-00.vmware.soksy.org"
-      - esxi_hostname: "esxi8-01.vmware.soksy.org"
-      - esxi_hostname: "esxi8-02.vmware.soksy.org"
-      # - esxi_hostname: "esxi8-10.vmware.soksy.org"
-      # - esxi_hostname: "esxi8-11.vmware.soksy.org"
-      # - esxi_hostname: "esxi8-12.vmware.soksy.org"
 
   tasks:
-    - name: Get creds from vault
+    - name: Get creds and nestedHosts info
       set_fact:
         vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
         vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+        nestedESXiHosts: "{{ lookup('env', 'nestedESXiJSONEncoded') | from_json }}"
 
     - name: Create dvSwitch
       community.vmware.vmware_dvswitch:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
-        datacenter: '{{ datacenter }}'
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ datacenterName }}"
         validate_certs: no
-        switch: dvSwitchA
+        switch: "{{ vdsName }}"
         version: 8.0.0
-        mtu: '{{ storage_mtu }}'
+        mtu: "{{ storage_mtu }}"
         uplink_quantity: 2
         discovery_protocol: lldp
         discovery_operation: both
@@ -43,15 +35,14 @@
         
         state: present
 
-
     - name: Create management portgroup
       community.vmware.vmware_dvs_portgroup:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
         validate_certs: no
         portgroup_name: PG-Management
-        switch_name: dvSwitchA
+        switch_name: "{{ vdsName }}"
         vlan_id: 2
         num_ports: 120
         port_binding: static
@@ -63,52 +54,52 @@
 
     - name: Add Host to dVS
       community.vmware.vmware_dvs_host:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
         validate_certs: no
-        esxi_hostname: '{{ item.esxi_hostname }}'
-        switch_name: dvSwitchA
+        esxi_hostname: "{{ item.value.fqdn }}"
+        switch_name: "{{ vdsName }}"
         vmnics:
           - vmnic1
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}" 
 
     - name: Migrate Management vmk
       community.vmware.vmware_migrate_vmk:
-        hostname: "{{ vcenter_hostname }}"
+        hostname: "{{ vcenterHost }}"
         username: "{{ vcenter_username }}"
         password: "{{ vcenter_password }}"
         validate_certs: no
-        esxi_hostname: '{{ item.esxi_hostname }}'
+        esxi_hostname: "{{ item.value.fqdn }}"
         device: vmk0
         current_switch_name: vSwitch0
         current_portgroup_name: "Management Network"
-        migrate_switch_name: dvSwitchA
+        migrate_switch_name: "{{ vdsName }}"
         migrate_portgroup_name: PG-Management
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Delete a VMware vSwitch in a specific host system
       community.vmware.vmware_vswitch:
-        hostname: "{{ vcenter_hostname }}"
+        hostname: "{{ vcenterHost }}"
         username: "{{ vcenter_username }}"
         password: "{{ vcenter_password }}"
         validate_certs: no
-        esxi_hostname: '{{ item.esxi_hostname }}'
+        esxi_hostname: "{{ item.value.fqdn }}"
         switch_name: vSwitch0
         state: absent
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Add Host to dVS
       community.vmware.vmware_dvs_host:
-        hostname: '{{ vcenter_hostname }}'
-        username: '{{ vcenter_username }}'
-        password: '{{ vcenter_password }}'
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
         validate_certs: no
-        esxi_hostname: '{{ item.esxi_hostname }}'
-        switch_name: dvSwitchA
+        esxi_hostname: "{{ item.value.fqdn }}"
+        switch_name: "{{ vdsName }}"
         vmnics:
           - vmnic0
           - vmnic1
         state: present
-      loop: "{{ esxilist }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
