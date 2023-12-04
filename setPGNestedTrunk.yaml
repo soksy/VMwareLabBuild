@@ -3,10 +3,6 @@
   hosts: 127.0.0.1
   connection: local
   gather_facts: no
-  vars:
-    esxilist:
-      - esxi_hostname: "esxi7.vmware.soksy.org"
-      # - esxi_hostname: "esxi7-04.vmware.soksy.org"
 
   tasks: 
     - name: Get creds from vault
@@ -18,12 +14,11 @@
 
     - name: Create/update PG-Nested-ToR-A to trunk for use after build
       community.vmware.vmware_portgroup:
-        hostname: "{{ item.esxi_hostname }}"
+        hostname: "{{ esxiHost }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
-        hosts: [ "{{ item.esxi_hostname }}" ]
+        hosts: [ "{{ esxiHost }}" ]
         switch: vSwitchToR-A
         portgroup: PG-Nested-ToR-A
         vlan_id: 4095
         validate_certs: no
-      loop: "{{ esxilist }}"

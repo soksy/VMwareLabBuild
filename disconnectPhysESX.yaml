@@ -3,8 +3,6 @@
   hosts: 127.0.0.1
   connection: local
   gather_facts: no
-  vars:
-    realdatacenter: "RealWorld"
 
   tasks: 
     - name: Get creds from vault
@@ -17,24 +15,12 @@
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"    
 
-    - name: showEnvs
-      ansible.builtin.debug:
-        msg: [
-            "{{ lookup('ansible.builtin.env', 'vcenterHost') }}",
-            "{{ vcenter_hostname }}",
-            "{{ lookup('ansible.builtin.env', 'sncName') }}",
-            "{{ sncName }}",
-            "{{ lookup('ansible.builtin.env', 'esxiHostIP') }}",
-            "{{ esxiHostIP }}"
-            ]
-
-
     - name: Disconnect real ESXi Hosts from their SNCs 
       community.vmware.vmware_host:
         hostname: '{{ vcenter_hostname }}'
         username: '{{ vcenter_username }}'
         password: '{{ vcenter_password }}'
-        datacenter: "RealWorld"
+        datacenter: 'RealWorld'
         cluster: "{{ sncName }}"
         esxi_hostname: '{{ esxiHostIP }}'
         esxi_username: '{{ esxi_username }}'

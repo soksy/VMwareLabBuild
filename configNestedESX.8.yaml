@@ -31,14 +31,6 @@
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
         nestedESXiHosts: "{{ lookup('env', 'nestedESXiJSONEncoded') | from_json }}"
 
-    - name: showNestedHostDetails
-      ansible.builtin.debug:
-        msg: [ 
-          "{{ item.value.fqdn }}",
-          "{{ item.value['storage-vmk-ip'] }}",
-        ]
-      loop: "{{ nestedESXiHosts | dict2items }}" 
-
     - name: Create Storage vSwitch
       community.vmware.vmware_vswitch:
         hostname: "{{ item.value.fqdn }}"

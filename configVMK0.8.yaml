@@ -4,46 +4,32 @@
   connection: local
   gather_facts: no
   vars:
-    vcenter_hostname: "vcenter.home.soksy.org"
-    datacenter: "myDC"
     storage_mtu: 1700
-    esxilist:
-      - esxi_hostname: "esxi8-00.vmware.soksy.org"
-        vmkip: "192.168.2.30"
-      - esxi_hostname: "esxi8-01.vmware.soksy.org"
-        vmkip: "192.168.2.31"
-      - esxi_hostname: "esxi8-02.vmware.soksy.org"
-        vmkip: "192.168.2.32"
-      # - esxi_hostname: "esxi8-10.vmware.soksy.org"
-      #   vmkip: "192.168.3.35"
-      # - esxi_hostname: "esxi8-11.vmware.soksy.org"
-      #   vmkip: "192.168.3.36"
-      # - esxi_hostname: "esxi8-12.vmware.soksy.org"
-      #   vmkip: "192.168.3.37"
 
   tasks: 
-    - name: Get creds from vault
+    - name: Get creds and nestedHosts info
       set_fact:
         vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
         vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+        nestedESXiHosts: "{{ lookup('env', 'nestedESXiJSONEncoded') | from_json }}"
 
     -  name: Add vMotion Service to vmk0
        community.vmware.vmware_vmkernel:
-         hostname: "{{ vcenter_hostname }}"
+         hostname: "{{ vcenterHost }}"
          username: "{{ vcenter_username }}"
          password: "{{ vcenter_password }}"
-         esxi_hostname: '{{ item.esxi_hostname }}'
-         dvswitch_name: dvSwitchA
+         esxi_hostname: '{{ item.value.fqdn }}'
+         dvswitch_name: "{{ vdsName }}"
          portgroup_name: PG-Management
          device: vmk0
          network:
            type: 'static'
-           ip_address: "{{ item.vmkip }}"
+           ip_address: "{{ item.value['operating-ip'] }}"
            subnet_mask: 255.255.255.0
          enable_mgmt: True
          enable_vmotion: True
          validate_certs: no
-       loop: "{{ esxilist }}"
+       loop: "{{ nestedESXiHosts | dict2items }}"
 

@@ -81,7 +81,7 @@ resource "time_sleep" "pause_for_cmi" {
 resource "null_resource" "PG-Nested-Trunk" {
   depends_on = [ time_sleep.pause_for_cmi ]
   provisioner "local-exec" {
-    command = "ansible-playbook setPGNestedTrunk.yaml"
+    command = "ansible-playbook --extra-vars esxiHost=${var.esxiHost} setPGNestedTrunk.yaml"
   }
 }
 
@@ -122,7 +122,7 @@ resource "time_sleep" "pause_for_cluster" {
 resource "null_resource" "config_vds" {
   depends_on = [ time_sleep.pause_for_cluster ]
   provisioner "local-exec" {
-    command = "ansible-playbook -vvv --extra-vars \"vcenterHost=${var.vcenterHost} datacenterName=${var.datacenterName} vdsName=${var.vdsName}\" configVDS.8.yaml"
+    command = "ansible-playbook -vvv --extra-vars \"vcenterHost=${var.vcenterHost} datacenterName=${var.datacenterName} vdsName=${var.vdsName} vlanID=${var.mgmtVlan}\" configVDS.8.yaml"
     environment = {
       nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
     }
@@ -132,8 +132,12 @@ resource "null_resource" "config_vds" {
 resource "null_resource" "config_vmk0_services" {
   depends_on = [ null_resource.config_vds ]
   provisioner "local-exec" {
-    command = "ansible-playbook configVMK0.8.yaml"
+    command = "ansible-playbook --extra-vars \"vcenterHost=${var.vcenterHost} vdsName=${var.vdsName}\" configVMK0.8.yaml"
+    environment = {
+      nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
+    }
   }
+
 }
 
 #resource "null_resource" "config_TPM_prep_vSAN" {
