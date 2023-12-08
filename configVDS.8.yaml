@@ -41,7 +41,7 @@
         username: "{{ vcenter_username }}"
         password: "{{ vcenter_password }}"
         validate_certs: no
-        portgroup_name: PG-Management
+        portgroup_name: "{{ mgmtPortgroup }}"
         switch_name: "{{ vdsName }}"
         vlan_id: "{{ vlanID }}"
         num_ports: 120
@@ -76,7 +76,7 @@
         current_switch_name: vSwitch0
         current_portgroup_name: "Management Network"
         migrate_switch_name: "{{ vdsName }}"
-        migrate_portgroup_name: PG-Management
+        migrate_portgroup_name: "{{ mgmtPortgroup }}"
       loop: "{{ nestedESXiHosts | dict2items }}"
 
     - name: Delete a VMware vSwitch in a specific host system

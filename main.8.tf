@@ -5,6 +5,7 @@ variable esxiHostIP {}
 variable vcenterHost {}
 variable datastoreName {} 
 variable vdsName {}
+variable mgmtPortgroup {}
 variable mgmtVlan {}
 variable nested_hosts {}
 variable sncName {}
@@ -33,10 +34,6 @@ locals {
   esxiUsername     = data.vault_generic_secret.vmware.data["esxi_username"]
   esxiPassword     = data.vault_generic_secret.vmware.data["esxi_password"]
   nestedESXiJSONEncoded  = jsonencode(var.nested_hosts)
-}
-
-output "TheESXiList" {
-  value = local.nestedESXiJSONEncoded
 }
 
 provider "vsphere" {
@@ -95,14 +92,9 @@ resource "null_resource" "config_storage" {
   } 
 }
 
-resource "vsphere_datacenter" "datacenter" {
-  depends_on = [ null_resource.config_storage ]
-  provider = vsphere.vcenter 
-  name = var.datacenterName
-}
 
 module "cluster" {
-  depends_on = [ vsphere_datacenter.datacenter ]
+  depends_on = [ null_resource.config_storage ]
   source = "./modules/cluster"
   providers = {
     vsphere = vsphere.vcenter
@@ -122,7 +114,7 @@ resource "time_sleep" "pause_for_cluster" {
 resource "null_resource" "config_vds" {
   depends_on = [ time_sleep.pause_for_cluster ]
   provisioner "local-exec" {
-    command = "ansible-playbook -vvv --extra-vars \"vcenterHost=${var.vcenterHost} datacenterName=${var.datacenterName} vdsName=${var.vdsName} vlanID=${var.mgmtVlan}\" configVDS.8.yaml"
+    command = "ansible-playbook -vvv --extra-vars \"vcenterHost=${var.vcenterHost} datacenterName=${var.datacenterName} vdsName=${var.vdsName} mgmtPortgroup=${var.mgmtPortgroup} vlanID=${var.mgmtVlan}\" configVDS.8.yaml"
     environment = {
       nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
     }
@@ -132,7 +124,7 @@ resource "null_resource" "config_vds" {
 resource "null_resource" "config_vmk0_services" {
   depends_on = [ null_resource.config_vds ]
   provisioner "local-exec" {
-    command = "ansible-playbook --extra-vars \"vcenterHost=${var.vcenterHost} vdsName=${var.vdsName}\" configVMK0.8.yaml"
+    command = "ansible-playbook --extra-vars \"vcenterHost=${var.vcenterHost} mgmtPortgroup=${var.mgmtPortgroup} vdsName=${var.vdsName}\" configVMK0.8.yaml"
     environment = {
       nestedESXiJSONEncoded = local.nestedESXiJSONEncoded
     }
@@ -166,4 +158,5 @@ resource "null_resource" "disconnect_physical_esx" {
     }
   }
 }
+
 

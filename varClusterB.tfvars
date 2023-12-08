@@ -1,4 +1,4 @@
-datacenterName = "myDC"
+datacenterName = "myDCA"
 clusterName = "myClusterB"
 
 esxiHost = "esxi7-04.vmware.soksy.org"
@@ -10,6 +10,7 @@ datastoreName = "datastore-nvme-04-00"
 
 vdsName = "dvSwitchB"
 
+mgmtPortgroup = "PG-Management-3"
 mgmtVlan = 3
 
 nested_hosts = {

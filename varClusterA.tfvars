@@ -10,6 +10,7 @@ datastoreName = "datastore-nvme-07-00"
 
 vdsName = "dvSwitchA"
 
+mgmtPortgroup = "PG-Management-2"
 mgmtVlan = 2
 
 nested_hosts = {

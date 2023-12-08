@@ -2,6 +2,7 @@ variable "hostmap" {}
 variable "datastorename" {}
 
 data "vsphere_datacenter" "datacenter" {
+  # This gets the details of the default ESXi datacenter
 }
 
 data "vsphere_datastore" "datastore" {

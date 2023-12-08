@@ -22,7 +22,7 @@
          password: "{{ vcenter_password }}"
          esxi_hostname: '{{ item.value.fqdn }}'
          dvswitch_name: "{{ vdsName }}"
-         portgroup_name: PG-Management
+         portgroup_name: "{{ mgmtPortgroup }}"
          device: vmk0
          network:
            type: 'static'

@@ -89,7 +89,7 @@ transportNodeProfiles:
     - host_switch_profiles:
       - name: ESXi-Uplink-Profile
         type: "UplinkHostSwitchProfile"
-      host_switch_name: dvSwitch
+      host_switch_name: dvSwitchA
       host_switch_mode: STANDARD
       host_switch_type: VDS
       uplinks:
@@ -190,5 +190,5 @@ EdgeNodes:
     VMName: "nsxedge-02"
     FQDN: "nsxedge-02.vmware.soksy.org"
     ManagementIPAddress: "192.168.2.22"
-    Hostname: "esxi8-10.vmware.soksy.org" 
-    Datastore: "datastore-nvme-10-00"
+    Hostname: "esxi8-01.vmware.soksy.org" 
+    Datastore: "datastore-nvme-01-00"

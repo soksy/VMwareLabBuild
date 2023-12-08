@@ -64,7 +64,7 @@
               vc_password: "{{ vCenterPassword }}"
               data_networks: "{{ EdgeTransportNodes.Deployment.DataPortGroups }}"
               management_network: "{{ EdgeTransportNodes.Deployment.ManagementPortGroup }}"
-              compute: "myCluster"
+              compute: "myClusterA"
               host: "{{ item.Hostname }}"
               storage:  "{{ item.Datastore }}"
               reservation_info:
