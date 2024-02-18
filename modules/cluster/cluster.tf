@@ -9,18 +9,18 @@ data "vsphere_datacenter" "datacenter" {
 }
 
 resource "vsphere_compute_cluster" "compute_cluster" {
-  name            = var.clName
-  datacenter_id   = data.vsphere_datacenter.datacenter.id
-  host_managed    = true
-  drs_enabled     = true
+  name                 = var.clName
+  datacenter_id        = data.vsphere_datacenter.datacenter.id
+  host_managed         = true
+  drs_enabled          = true
   drs_automation_level = "fullyAutomated"
 
   ha_enabled = true
 }
 
 data "vsphere_host_thumbprint" "thumbprint" {
-  for_each   = var.hosts
-  address = each.value.fqdn
+  for_each = var.hosts
+  address  = each.value.fqdn
   insecure = true
 }
 

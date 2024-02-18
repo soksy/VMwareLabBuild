@@ -167,7 +167,7 @@ EdgeTransportNodes:
     DataPortGroups:
       - "Edge-Trunk-A"
       - "Edge-Trunk-B"
-    ManagementPortGroup: "PG-Management"
+    ManagementPortGroup: "PG-Management-2"
     ManagementIPPrefix: "24"
     Gateway: "192.168.2.254"
     Reservations:
@@ -183,12 +183,12 @@ EdgeNodes:
     VMName: "nsxedge-01"
     FQDN: "nsxedge-01.vmware.soksy.org"
     ManagementIPAddress: "192.168.2.21"
-    Hostname: "esxi8-00.vmware.soksy.org" 
-    Datastore: "datastore-nvme-00-00"
+    Hostname: "esxi-4.vmware.soksy.org" 
+    Datastore: "datastore1"
   - Name: "nsxedge-02"
     Description: NSX Edge Node 2
     VMName: "nsxedge-02"
     FQDN: "nsxedge-02.vmware.soksy.org"
     ManagementIPAddress: "192.168.2.22"
-    Hostname: "esxi8-01.vmware.soksy.org" 
-    Datastore: "datastore-nvme-01-00"
+    Hostname: "esxi-4.vmware.soksy.org" 
+    Datastore: "datastore1"
