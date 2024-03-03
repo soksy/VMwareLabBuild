@@ -6,7 +6,6 @@
   vars:
     datacenter_name: "ha-datacenter"
     qnap_target_ip: "192.168.10.8"
-    tnas_target_ip: "192.168.10.9"
     storage_mtu: 9000
     storage_switch: vSwitchStorage
     storage_portgroup: PG-Storage

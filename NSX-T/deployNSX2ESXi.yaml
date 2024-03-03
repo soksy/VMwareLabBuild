@@ -21,7 +21,7 @@
         compute_manager_name:  vcenter
         display_name: "TNC_whatTheHeckIsThis"
         description: "Transport Node Collections"
-        cluster_name: myClusterA
+        cluster_name: myCluster
         transport_node_profile_name: ESXi-Transport-Node-Profile
         state: present
 

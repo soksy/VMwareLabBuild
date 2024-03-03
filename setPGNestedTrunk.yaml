@@ -12,13 +12,13 @@
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
 
-    - name: Create/update PG-Nested-ToR-A to trunk for use after build
+    - name: Create/update ToR-A to trunk for use after build
       community.vmware.vmware_portgroup:
         hostname: "{{ esxiHost }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
         hosts: [ "{{ esxiHost }}" ]
-        switch: vSwitchToR-A
-        portgroup: PG-Nested-ToR-A
+        switch: "{{ switchName }}"
+        portgroup: "{{ portgroupName }}"
         vlan_id: 4095
         validate_certs: no

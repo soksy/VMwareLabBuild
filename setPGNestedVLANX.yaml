@@ -12,13 +12,13 @@
         esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
         esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
 
-    - name: Create/update PG-Nested-ToR-A with Management VLAN ID for initial build, so that DHCP works
+    - name: Create/update ToR-A with Management VLAN ID for initial build, so that DHCP works
       community.vmware.vmware_portgroup:
         hostname: "{{ esxiHost }}"
         username: "{{ esxi_username }}"
         password: "{{ esxi_password }}"
         hosts: [ "{{ esxiHost }}" ]
-        switch: vSwitchToR-A
-        portgroup: PG-Nested-ToR-A
+        switch:  "{{ switchName }}" 
+        portgroup:  "{{ portgroupName }}" 
         vlan_id: "{{ vlanID }}"
         validate_certs: no

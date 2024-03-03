@@ -5,7 +5,7 @@
   gather_facts: no
 
   tasks: 
-    - name: Get creds from vault
+    - name: Get creds from vault and env variables
       set_fact:
         vcenter_hostname: "{{ lookup('ansible.builtin.env', 'vcenterHost') }}"
         sncName: "{{ lookup('env', 'sncName') }}"
