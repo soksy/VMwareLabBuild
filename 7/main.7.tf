@@ -41,7 +41,7 @@ provider "vault" {
 }
 
 data "vault_generic_secret" "vmware" {
-  path = "secret/vmware"
+  path = "kv/vmware"
 }
 
 locals {
