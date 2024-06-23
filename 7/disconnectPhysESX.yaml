@@ -1,0 +1,29 @@
+---
+- name: Disconnect real ESXi Hosts from their SNCs so subsequent builds can control ESXi directly
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+
+  tasks: 
+    - name: Get creds from vault and env variables
+      set_fact:
+        vcenter_hostname: "{{ lookup('ansible.builtin.env', 'vcenterHost') }}"
+        sncName: "{{ lookup('env', 'sncName') }}"
+        esxiHostIP: "{{ lookup('env', 'esxiHostIP') }}"
+        vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
+        vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
+        esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
+        esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"    
+
+    - name: Disconnect real ESXi Hosts from their SNCs 
+      community.vmware.vmware_host:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter: 'RealWorld'
+        cluster: "{{ sncName }}"
+        esxi_hostname: '{{ esxiHostIP }}'
+        esxi_username: '{{ esxi_username }}'
+        esxi_password: '{{ esxi_password }}'
+        state: disconnected
+        validate_certs: no

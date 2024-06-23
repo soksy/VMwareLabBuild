@@ -1,0 +1,170 @@
+---
+- name:   Create vmk2 for vMotion service, vSAN Portgroup and add vTPM for vSAN encryption
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: no
+  vars:
+    vcenter_hostname: "vcenter.home.soksy.org"
+    nesteddatacenter: "myDC"
+    realdatacenter: "RealWorld"
+    cluster: "myCluster"
+    storage_mtu: 9000
+    esxilist:
+      - esxi_hostname: "esxi8-00.vmware.soksy.org"
+        vmname: "esxi8-00"
+        vmkip: "192.168.3.30"
+      - esxi_hostname: "esxi8-01.vmware.soksy.org"
+        vmname: "esxi8-01"
+        vmkip: "192.168.3.31"
+      - esxi_hostname: "esxi8-10.vmware.soksy.org"
+        vmname: "esxi8-10"
+        vmkip: "192.168.3.35"
+      - esxi_hostname: "esxi8-11.vmware.soksy.org"
+        vmname: "esxi8-11"
+        vmkip: "192.168.3.36"
+    realesxilist:
+      - real_esxi_hostname: "esxi7.vmware.soksy.org"
+        sncname: "ESXi7-07-SNC"
+      - real_esxi_hostname: "esxi7-04.vmware.soksy.org"
+        sncname: "ESXi7-04-SNC"
+
+  tasks: 
+    - name: Get creds from vault
+      set_fact:
+        vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
+        vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
+        esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
+        esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+
+    - name: Reconnect real ESXi Host (with username/password set)
+      community.vmware.vmware_host:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter: "{{ realdatacenter }}"
+        cluster: "{{ item.sncname }}"
+        esxi_hostname: '{{ item.real_esxi_hostname }}'
+        esxi_username: '{{ esxi_username }}'
+        esxi_password: '{{ esxi_password }}'
+        state: reconnect
+        validate_certs: no
+      loop: "{{ realesxilist }}"
+
+    - name: vreate vSAN Portgroup
+      community.vmware.vmware_dvs_portgroup:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        portgroup_name: PG-vSAN
+        switch_name: dvSwitch
+        vlan_id: 3
+        num_ports: 12
+        port_binding: static
+        validate_certs: no
+        state: present
+
+    - name: create vmknic for vSAN
+      community.vmware.vmware_vmkernel:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        esxi_hostname: '{{ item.esxi_hostname }}'
+        dvswitch_name: dvSwitch
+        portgroup_name: PG-vSAN
+        device: vmk2
+        network:
+          type: 'static'
+          ip_address: "{{ item.vmkip }}"
+          subnet_mask: 255.255.255.0
+        enable_vsan: True
+        validate_certs: no
+        state: present
+      loop: "{{ esxilist }}"
+
+    - name: Disable HA
+      community.vmware.vmware_cluster_ha:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter: "{{ nesteddatacenter }}"
+        validate_certs: no
+        cluster_name: "{{ cluster }}"
+        enable: false
+
+    - name: Disable DRS
+      community.vmware.vmware_cluster_drs:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter_name: "{{ nesteddatacenter }}"
+        validate_certs: no
+        cluster_name: "{{ cluster }}"
+        enable: false
+
+    - name: PowerOff VMs to allow vTPM to be added
+      community.vmware.vmware_guest_powerstate:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        name: '{{ item.vmname }}'
+        datacenter: "{{ nesteddatacenter }}"
+        validate_certs: no
+        state: powered-off
+      loop: "{{ esxilist }}"
+
+    - name: RememeberToEnableHostEncryption
+      ansible.builtin.pause:
+        prompt: " N.B. re-enable host encryption mode first if NKP has changed (no asible or PowerCLI for this"
+
+
+    - name: add vTPM - N.B. re-enable host encryption mode first if NKP has changed (no asible or PowerCLI for this
+      community.vmware.vmware_guest_tpm:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        name: '{{ item.vmname }}'
+        datacenter: "{{ nesteddatacenter }}"
+        validate_certs: no
+        state: present
+      loop: "{{ esxilist }}"
+
+    - name: Enable Secure Boot
+      community.vmware.vmware_guest_boot_manager:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        name: '{{ item.vmname }}'
+        validate_certs: no
+        secure_boot_enabled: true
+      loop: "{{ esxilist }}"
+
+    - name: PowerOn VMs
+      community.vmware.vmware_guest_powerstate:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        name: '{{ item.vmname }}'
+        datacenter: "{{ nesteddatacenter }}"
+        validate_certs: no
+        state: powered-on
+      loop: "{{ esxilist }}"
+
+    - name: Enable HA
+      community.vmware.vmware_cluster_ha:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter: "{{ nesteddatacenter }}"
+        validate_certs: no
+        cluster_name: "{{ cluster }}"
+        enable: true
+
+    - name: Enable DRS
+      community.vmware.vmware_cluster_drs:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter_name: "{{ nesteddatacenter }}"
+        validate_certs: no
+        cluster_name: "{{ cluster }}"
+        enable: true

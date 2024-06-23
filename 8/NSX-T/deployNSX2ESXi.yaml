@@ -1,0 +1,27 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  vars_files:
+    - myNSXTvars.yml
+  
+  name: deployNSX2ESXi.yaml
+  tasks:
+    - name: Get creds from vault
+      set_fact:
+        nsxMgrUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_username') }}"
+        nsxMgrPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_password') }}"  
+  
+    - name: Configure NSX on ESXi hosts (whole cluster)
+      vmware.ansible_for_nsxt.nsxt_transport_node_collections:
+        hostname: "{{ nsxMgrHostname }}"
+        username: "{{ nsxMgrUsername }}"
+        password: "{{ nsxMgrPassword }}"
+        validate_certs: "{{ validateCerts }}"
+        resource_type: "TransportNodeCollection"
+        compute_manager_name:  vcenter
+        display_name: "TNC_whatTheHeckIsThis"
+        description: "Transport Node Collections"
+        cluster_name: myCluster
+        transport_node_profile_name: ESXi-Transport-Node-Profile
+        state: present
+

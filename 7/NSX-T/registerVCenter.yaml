@@ -1,0 +1,31 @@
+---
+- hosts: localhost
+  connection: local
+  name: registerVCenter.yaml
+  vars_files:
+  - myNSXTvars.yml
+
+  tasks:
+    - name: Get creds from vault
+      set_fact:
+        nsxMgrUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_username') }}"
+        nsxMgrPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:nsx_password') }}"    
+        vCenterUsername: "{{ lookup('hashi_vault','secret=secret/data/vmware:vcenter_username') }}"
+        vCenterPassword: "{{ lookup('hashi_vault','secret=secret/data/vmware:vcenter_password') }}"    
+
+    - name: Register VCenter with NSX as Compute Manager
+      vmware.ansible_for_nsxt.nsxt_fabric_compute_managers:
+        hostname: "{{ nsxMgrHostname }}"
+        username: "{{ nsxMgrUsername }}"
+        password: "{{ nsxMgrPassword }}"
+        validate_certs: "{{ validateCerts }}"
+        display_name: "vcenter"
+        server: "{{ vcenterHostname }}"
+        origin_type: "vCenter"
+        set_as_oidc_provider: true
+        credential:
+          credential_type: "UsernamePasswordLoginCredential"
+          username: "{{ vCenterUsername }}"
+          password: "{{ vCenterPassword }}"
+          thumbprint: "8A:8A:D5:CC:F2:4E:95:15:96:0B:8F:78:3F:D3:15:4B:16:7B:B2:75:F0:7F:3C:C9:BA:D1:4D:76:61:F6:7A:81"
+        state: present

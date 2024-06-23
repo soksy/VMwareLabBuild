@@ -1,0 +1,105 @@
+---
+- name: Create VDS and Swing management VMK onto it
+  hosts: 127.0.0.1
+  connection: local
+  gather_facts: false
+  vars:
+    storage_mtu: 1700
+
+  tasks:
+    - name: Get creds and nestedHosts info
+      set_fact:
+        vcenter_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_username') }}"
+        vcenter_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:vcenter_password') }}"
+        esxi_username: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_username') }}"
+        esxi_password: "{{ lookup('hashi_vault', 'secret=secret/data/vmware:esxi_password') }}"
+        nestedESXiHosts: "{{ lookup('env', 'nestedESXiJSONEncoded') | from_json }}"
+
+    - name: Create dvSwitch
+      community.vmware.vmware_dvswitch:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ datacenterName }}"
+        validate_certs: no
+        switch: "{{ vdsName }}"
+        version: 7.0.0
+        mtu: "{{ storage_mtu }}"
+        uplink_quantity: 2
+        discovery_protocol: lldp
+        discovery_operation: both
+        network_policy:
+          promiscuous: yes
+          mac_changes: no
+          forged_transmits: no
+        
+        state: present
+
+    - name: Create management portgroup
+      community.vmware.vmware_dvs_portgroup:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        portgroup_name: "{{ mgmtPortgroup }}"
+        switch_name: "{{ vdsName }}"
+        vlan_id: "{{ vlanID }}"
+        num_ports: 120
+        port_binding: static
+        teaming_policy:
+          active_uplinks: "Uplink 1"
+          standby_uplinks: "Uplink 2"
+          load_balance_policy: failover_explicit
+        state: present
+
+    - name: Add Host to dVS
+      community.vmware.vmware_dvs_host:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.value.fqdn }}"
+        switch_name: "{{ vdsName }}"
+        vmnics:
+          - vmnic1
+        state: present
+      loop: "{{ nestedESXiHosts | dict2items }}" 
+
+    - name: Migrate Management vmk
+      community.vmware.vmware_migrate_vmk:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.value.fqdn }}"
+        device: vmk0
+        current_switch_name: vSwitch0
+        current_portgroup_name: "Management Network"
+        migrate_switch_name: "{{ vdsName }}"
+        migrate_portgroup_name: "{{ mgmtPortgroup }}"
+      loop: "{{ nestedESXiHosts | dict2items }}"
+
+    - name: Delete a VMware vSwitch in a specific host system
+      community.vmware.vmware_vswitch:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.value.fqdn }}"
+        switch_name: vSwitch0
+        state: absent
+      loop: "{{ nestedESXiHosts | dict2items }}"
+
+    - name: Add Host to dVS
+      community.vmware.vmware_dvs_host:
+        hostname: "{{ vcenterHost }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        esxi_hostname: "{{ item.value.fqdn }}"
+        switch_name: "{{ vdsName }}"
+        vmnics:
+          - vmnic0
+          - vmnic1
+        state: present
+      loop: "{{ nestedESXiHosts | dict2items }}"
